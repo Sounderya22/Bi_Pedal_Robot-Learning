@@ -11,7 +11,11 @@ from mpi4py import MPI
 import argparse
 
 os.environ["OPENAI_LOG_FORMAT"] = "stdout,log,tensorboard"
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+
+# Distribute MPI workers evenly across 2 GPUs (assumes 2 GPUs allocated by SLURM)
+rank = MPI.COMM_WORLD.Get_rank()
+os.environ["CUDA_VISIBLE_DEVICES"] = str(rank % 2)
+
 
 model_folder = ROOT_PATH + "/ckpts/"
 
@@ -94,7 +98,9 @@ def train(max_iters, with_gpu=True, callback=None):
         U.make_session(config=config).__enter__()
         print("**************Using CPU**************")
     else:
-        U.make_session().__enter__()
+        config = tf.ConfigProto()
+        config.gpu_options.allow_growth = True
+        U.make_session(config=config).__enter__()
         print("**************Using GPU**************")
 
     def policy_fn(name, ob_space_vf, ob_space_pol, ob_space_pol_cnn, ac_space):
@@ -123,7 +129,7 @@ def train(max_iters, with_gpu=True, callback=None):
         env,
         policy_fn,
         max_iters=max_iters,
-        timesteps_per_actorbatch=4096,
+        timesteps_per_actorbatch=2048,
         clip_param=0.2,
         entcoeff=0,
         optim_epochs=2,
@@ -145,7 +151,7 @@ def training_callback(locals_, globals_):
     iters_so_far_ = locals_["iters_so_far"]
     model_dir = model_folder + saved_model
     if not os.path.exists(model_dir):
-        os.makedirs(model_dir)
+        os.makedirs(model_dir, exist_ok=True)
     if MPI.COMM_WORLD.Get_rank() == 0 and iters_so_far_ % save_interval == 0:
         saver_.save(sess_, model_dir + "/model", global_step=timesteps_so_far_)
     return True

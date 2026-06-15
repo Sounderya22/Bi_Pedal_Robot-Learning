@@ -346,23 +346,26 @@ def learn(
         logger.record_tabular(
             "evaluations/ev_tdlam_before", explained_variance(vpredbefore, tdlamret)
         )
-        lrlocal = (
-            seg["ep_lens"],
-            seg["ep_rets"],
-            seg["ep_rets_detail"][:, 0],
-            seg["ep_rets_detail"][:, 1],
-            seg["ep_rets_detail"][:, 2],
-            seg["ep_rets_detail"][:, 3],
-            seg["ep_rets_detail"][:, 4],
-            seg["ep_rets_detail"][:, 5],
-            seg["ep_rets_detail"][:, 6],
-            seg["ep_rets_detail"][:, 7],
-            seg["ep_rets_detail"][:, 8],
-            seg["ep_rets_detail"][:, 9],
-            seg["ep_rets_detail"][:, 10],
-            seg["ep_rets_detail"][:, 11],
-            seg["ep_rets_detail"][:, 12],
-        )  # local values
+        if len(seg["ep_lens"]) > 0:
+            lrlocal = (
+                seg["ep_lens"],
+                seg["ep_rets"],
+                seg["ep_rets_detail"][:, 0],
+                seg["ep_rets_detail"][:, 1],
+                seg["ep_rets_detail"][:, 2],
+                seg["ep_rets_detail"][:, 3],
+                seg["ep_rets_detail"][:, 4],
+                seg["ep_rets_detail"][:, 5],
+                seg["ep_rets_detail"][:, 6],
+                seg["ep_rets_detail"][:, 7],
+                seg["ep_rets_detail"][:, 8],
+                seg["ep_rets_detail"][:, 9],
+                seg["ep_rets_detail"][:, 10],
+                seg["ep_rets_detail"][:, 11],
+                seg["ep_rets_detail"][:, 12],
+            )  # local values
+        else:
+            lrlocal = ([], [], [], [], [], [], [], [], [], [], [], [], [], [], [])
         listoflrpairs = MPI.COMM_WORLD.allgather(lrlocal)  # list of tuples
         (
             lens,

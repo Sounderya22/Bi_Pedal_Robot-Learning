@@ -1,0 +1,3 @@
+model_checkpoint_path: "/fs/nexus-scratch/vvs22/Robot-Learning-Bipedal-Footstep-PID-MPC/ckpts/footstep_training_rnds42_cont1/model-3273663"
+all_model_checkpoint_paths: "/fs/nexus-scratch/vvs22/Robot-Learning-Bipedal-Footstep-PID-MPC/ckpts/footstep_training_rnds42_cont1/model-0"
+all_model_checkpoint_paths: "/fs/nexus-scratch/vvs22/Robot-Learning-Bipedal-Footstep-PID-MPC/ckpts/footstep_training_rnds42_cont1/model-3273663"

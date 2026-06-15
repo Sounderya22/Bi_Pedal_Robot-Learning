@@ -73,8 +73,35 @@ class ReferenceGenerator:
 
         if self.use_footstep_plan and self.footstep_index < len(self.footstep_traj):
             x, y, theta = self.footstep_traj[self.footstep_index]
-            self.last_ref_gaitparams = np.array([0.0, 0.0, 0.9])
-            self.last_ref_rotparams = np.array([0.0, 0.0, theta])
+            
+            # Look ahead to calculate velocities
+            if self.footstep_index < len(self.footstep_traj) - 1:
+                next_x, next_y, next_theta = self.footstep_traj[self.footstep_index + 1]
+            else:
+                next_x, next_y, next_theta = x, y, theta
+
+            vx_global = (next_x - x) / self.dt
+            vy_global = (next_y - y) / self.dt
+            
+            # Transform global velocity to local velocity based on current reference yaw (theta)
+            local_vx = vx_global * math.cos(theta) + vy_global * math.sin(theta)
+            local_vy = -vx_global * math.sin(theta) + vy_global * math.cos(theta)
+            
+            # Proper yaw velocity (vyaw) computation
+            theta_diff = (next_theta - theta + math.pi) % (2 * math.pi) - math.pi
+            vyaw = theta_diff / self.dt
+
+            self.last_ref_gaitparams = np.array([local_vx, local_vy, 0.9])
+            self.last_ref_rotparams = np.array([0.0, 0.0, vyaw])
+            
+            # Update the global reference position and yaw to track the footstep path
+            self.cmd_generator.set_ref_global_pos(np.array([x, y]))
+            self.cmd_generator.set_ref_global_yaw(theta)
+
+            self.gait_library.update_gaitlib_env(
+                gait_param=self.last_ref_gaitparams, time_in_sec=time_in_sec
+            )
+
             self.footstep_index += 1
             return
 
@@ -205,17 +232,25 @@ def load_footstep_plans(filepath):
             plans.append(steps)
     return plans
 
-def interpolate_trajectory(footsteps, dt=0.02, step_duration=0.5):
+def interpolate_trajectory(footsteps, dt=0.03, walking_speed=0.5):
     ref_traj = []
     for i in range(len(footsteps) - 1):
         x0, y0, th0 = footsteps[i]
         x1, y1, th1 = footsteps[i + 1]
-        steps = int(step_duration / dt)
+        
+        distance = math.sqrt((x1 - x0)**2 + (y1 - y0)**2)
+        step_duration = distance / walking_speed if distance > 0 else 0.5
+        steps = max(1, int(step_duration / dt))
+        
         for t in range(steps):
             alpha = t / steps
             x = (1 - alpha) * x0 + alpha * x1
             y = (1 - alpha) * y0 + alpha * y1
-            theta = (1 - alpha) * th0 + alpha * th1
+            
+            # Handle angle wrap around for interpolation
+            theta_diff = (th1 - th0 + math.pi) % (2 * math.pi) - math.pi
+            theta = th0 + alpha * theta_diff
             ref_traj.append((x, y, theta))
+            
     ref_traj.append(footsteps[-1])
     return ref_traj

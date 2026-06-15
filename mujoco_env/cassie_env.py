@@ -100,19 +100,19 @@ class CassieEnv:
             "r_footpos",
             "r_delta_acs",
         ]
-        w_mpos = 15.0
+        w_mpos = 5.0
         w_mvel_nonstand = 0.0
         w_mvel_stand = 15.0
-        w_ptrans_pos = 6.0
-        w_ptrans_velx = 7.5
-        w_ptrans_vely = 7.5
-        w_prot_pos = 12.5
+        w_ptrans_pos = 10.0
+        w_ptrans_velx = 15.0
+        w_ptrans_vely = 15.0
+        w_prot_pos = 10.0
         w_prot_vel = 3.0
         w_ptrans_z = 5.0
         w_torque = 3.0
-        w_foot_force = 10.0
+        w_foot_force = 5.0
         w_acc = 3.0
-        w_footpos = 3.0
+        w_footpos = 5.0
         w_delta_acs_nonstand = 3.0
         w_delta_acs_stand = 10.0
 
@@ -351,6 +351,8 @@ class CassieEnv:
         obs_vf, obs_pol = self.__get_observation(acs=actual_pTs, step=True)
         reward, reward_dict = self.__get_reward(acs=actual_pTs)
         done = self.__is_done() if not restore else False
+        if done and self.fall_flag:
+            reward -= 5.0
         self.info["reward_dict"] = reward_dict
         self.last_acs = actual_pTs
         return obs_vf, obs_pol, reward, done, self.info
@@ -453,10 +455,19 @@ class CassieEnv:
         ob_command = np.concatenate(
             [
                 [self.ref_dict["base_pos_global"][-1]],  # walking height
-                self.ref_dict["base_vel_local"][[0, 1]],  # local velocity command
+                self.ref_dict["base_vel_local"][[0, 1, 2]],  # local velocity command (vx, vy, vyaw)
                 [math.cos(ref_yaw), math.sin(ref_yaw)],  # desired turning yaw angle
             ]
-        )  #  height, vx, vy, yaw
+        )  #  height, vx, vy, vyaw, cos(yaw), sin(yaw)
+
+        # position error in local frame
+        curr_xy = self.qpos[[0, 1]] - self.init_xy
+        pos_err_global = self.ref_dict["base_pos_global"][[0, 1]] - curr_xy
+        curr_yaw = self.curr_rpy_obs[-1]
+        pos_err_local_x = pos_err_global[0] * math.cos(curr_yaw) + pos_err_global[1] * math.sin(curr_yaw)
+        pos_err_local_y = -pos_err_global[0] * math.sin(curr_yaw) + pos_err_global[1] * math.cos(curr_yaw)
+        pos_err_local = np.array([pos_err_local_x, pos_err_local_y])
+
         if self.timestep == 0:
             [self.previous_obs.append(ob_curr) for i in range(self.history_len_vf)]
             [
@@ -474,7 +485,7 @@ class CassieEnv:
         )
         obs_pol_hist = np.flip(np.asarray(self.long_history).T, 1)
 
-        obs_pol_base = np.concatenate([ob_prev, ob_curr, ob1, ob4, ob7, ob_command])
+        obs_pol_base = np.concatenate([ob_prev, ob_curr, ob1, ob4, ob7, ob_command, pos_err_local])
         obs_pol = (obs_pol_base, obs_pol_hist)
 
         obs_vf = np.concatenate(
