@@ -233,10 +233,31 @@ def load_footstep_plans(filepath):
     return plans
 
 def interpolate_trajectory(footsteps, dt=0.03, walking_speed=0.5):
-    ref_traj = []
+    if len(footsteps) < 2:
+        return footsteps
+
+    base_waypoints = []
+    # Add an initial base waypoint to start from roughly origin facing the same way
+    base_waypoints.append((0.0, 0.0, footsteps[0][2]))
+    
     for i in range(len(footsteps) - 1):
         x0, y0, th0 = footsteps[i]
         x1, y1, th1 = footsteps[i + 1]
+        
+        # Compute midpoint to act as the smooth base trajectory
+        x = (x0 + x1) / 2.0
+        y = (y0 + y1) / 2.0
+        
+        # Compute proper midpoint heading
+        theta_diff = (th1 - th0 + math.pi) % (2 * math.pi) - math.pi
+        theta = th0 + theta_diff / 2.0
+        
+        base_waypoints.append((x, y, theta))
+        
+    ref_traj = []
+    for i in range(len(base_waypoints) - 1):
+        x0, y0, th0 = base_waypoints[i]
+        x1, y1, th1 = base_waypoints[i + 1]
         
         distance = math.sqrt((x1 - x0)**2 + (y1 - y0)**2)
         step_duration = distance / walking_speed if distance > 0 else 0.5
@@ -252,5 +273,5 @@ def interpolate_trajectory(footsteps, dt=0.03, walking_speed=0.5):
             theta = th0 + alpha * theta_diff
             ref_traj.append((x, y, theta))
             
-    ref_traj.append(footsteps[-1])
+    ref_traj.append(base_waypoints[-1])
     return ref_traj

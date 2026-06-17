@@ -1,1 +1,1 @@
-python ../scripts/test.py  --test_model 'footstep_training_rnds42_cont3'
+python ../scripts/test.py  --test_model 'footstep_training_v2_rnds42'
