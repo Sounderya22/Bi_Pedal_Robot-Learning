@@ -62,10 +62,19 @@ class ReferenceGenerator:
             self.last_standing_flag = True
 
         if self.use_footstep_plan:
-            plans = load_footstep_plans("../mujoco_env/footstep_plans.txt")
-            # print("Hereeeeee")
-            raw_steps = plans[0]
-            self.footstep_traj = interpolate_trajectory(raw_steps, dt=self.dt)
+            import os
+            filepath = os.path.join(os.path.dirname(__file__), "footstep_plans.txt")
+            plans = load_footstep_plans(filepath)
+            raw_steps = plans[np.random.randint(len(plans))]
+            
+            if len(raw_steps) >= 2:
+                mid_x = (raw_steps[0][0] + raw_steps[1][0]) / 2.0
+                mid_y = (raw_steps[0][1] + raw_steps[1][1]) / 2.0
+            else:
+                mid_x, mid_y = raw_steps[0][0], raw_steps[0][1]
+                
+            shifted_steps = [(x - mid_x, y - mid_y, theta) for x, y, theta in raw_steps]
+            self.footstep_traj = interpolate_trajectory(shifted_steps, dt=self.dt)
             self.footstep_index = 0
 
     def update_ref_env(self, time_in_sec, base_xy_g, base_yaw):
@@ -237,8 +246,6 @@ def interpolate_trajectory(footsteps, dt=0.03, walking_speed=0.5):
         return footsteps
 
     base_waypoints = []
-    # Add an initial base waypoint to start from roughly origin facing the same way
-    base_waypoints.append((0.0, 0.0, footsteps[0][2]))
     
     for i in range(len(footsteps) - 1):
         x0, y0, th0 = footsteps[i]

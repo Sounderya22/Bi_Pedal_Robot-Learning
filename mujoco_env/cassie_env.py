@@ -663,6 +663,8 @@ class CassieEnv:
         elif self.timestep >= self.max_timesteps:
             # print('max step reached:{}'.format(self.max_timesteps))
             return True
+        elif self.reference_generator.use_footstep_plan and self.reference_generator.footstep_index >= len(self.reference_generator.footstep_traj):
+            return True
         else:
             return False
 
