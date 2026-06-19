@@ -91,10 +91,11 @@ class ReferenceGenerator:
 
             vx_global = (next_x - x) / self.dt
             vy_global = (next_y - y) / self.dt
-            
-            # Transform global velocity to local velocity based on current reference yaw (theta)
-            local_vx = vx_global * math.cos(theta) + vy_global * math.sin(theta)
-            local_vy = -vx_global * math.sin(theta) + vy_global * math.cos(theta)
+
+            # Use path speed as forward local velocity — converting to local frame via theta
+            # can produce negative vx during turns when heading and travel direction diverge.
+            local_vx = math.sqrt(vx_global**2 + vy_global**2)
+            local_vy = 0.0
             
             # Proper yaw velocity (vyaw) computation
             theta_diff = (next_theta - theta + math.pi) % (2 * math.pi) - math.pi
