@@ -112,7 +112,10 @@ class ReferenceGenerator:
                 gait_param=self.last_ref_gaitparams, time_in_sec=time_in_sec
             )
 
-            self.footstep_index += 1
+            # Prevent the target from outrunning the robot (which causes forward knee crashing)
+            pos_err_x = (x - base_xy_g[0]) * math.cos(base_yaw) + (y - base_xy_g[1]) * math.sin(base_yaw)
+            if pos_err_x < 0.15:  # max lead of 15 cm
+                self.footstep_index += 1
             return
 
         if (
