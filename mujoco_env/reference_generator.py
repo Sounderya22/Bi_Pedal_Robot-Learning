@@ -92,10 +92,17 @@ class ReferenceGenerator:
             vx_global = (next_x - x) / self.dt
             vy_global = (next_y - y) / self.dt
 
+            # Prevent the target from outrunning the robot (which causes forward knee crashing)
+            pos_err_x = (x - base_xy_g[0]) * math.cos(base_yaw) + (y - base_xy_g[1]) * math.sin(base_yaw)
+
             # Transform to local frame; clamp vx to 0 to prevent backward gait references
             # during turns where heading and travel direction momentarily diverge.
             local_vx = max(0.0, vx_global * math.cos(theta) + vy_global * math.sin(theta))
             local_vy = -vx_global * math.sin(theta) + vy_global * math.cos(theta)
+            
+            # Break deadlock: If target is ahead but commanded velocity is near 0, force a creep velocity
+            if local_vx < 0.2 and pos_err_x > 0.05:
+                local_vx = 0.2
             
             # Proper yaw velocity (vyaw) computation
             theta_diff = (next_theta - theta + math.pi) % (2 * math.pi) - math.pi
@@ -112,8 +119,6 @@ class ReferenceGenerator:
                 gait_param=self.last_ref_gaitparams, time_in_sec=time_in_sec
             )
 
-            # Prevent the target from outrunning the robot (which causes forward knee crashing)
-            pos_err_x = (x - base_xy_g[0]) * math.cos(base_yaw) + (y - base_xy_g[1]) * math.sin(base_yaw)
             if pos_err_x < 0.15:  # max lead of 15 cm
                 self.footstep_index += 1
             return
