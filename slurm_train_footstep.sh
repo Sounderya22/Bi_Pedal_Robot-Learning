@@ -25,9 +25,11 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HOME/.mujoco/mujoco210/bin
 # Start training
 cd /fs/nexus-scratch/vvs22/Robot-Learning-Bipedal-Footstep-PID-MPC/exe
 mpirun -np 16 python ../scripts/train.py \
-    --train_name 'footstep_training_v6' \
+    --train_name 'footstep_training_v7' \
     --rnd_seed 42 \
     --max_iters 500000 \
-    --save_interval 100
+    --save_interval 100 \
+    --restore_from 'footstep_training_v7_rnds42' \
+    --restore_cont 1
 
 echo "=== Job finished at $(date) ==="
